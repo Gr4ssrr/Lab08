@@ -25,8 +25,13 @@ class Model:
         :param mese: Mese selezionato (un intero da 1 a 12)
         :return: lista di tuple --> (nome del distributore, media), es. (Distributore A, 1.789)
         """
-        # TODO
-
+        risultato = []
+        for distributore in self._distributori:
+            prezzi_mese = [p.prezzo_litro for p in distributore.get_prezzi() if p.data.month == mese]
+            media = sum(prezzi_mese) / len(prezzi_mese) if prezzi_mese else 0
+            risultato.append((distributore.nome, media))
+        return risultato
+    
     def get_sequenza_ottima(self, mese:int):
         """
         Calcola la sequenza ottimale di rifornimenti nei primi 7 giorni
@@ -46,11 +51,31 @@ class Model:
 
     def __ricorsione(self, sequenza_parziale, giorno, ultimo_distributore, costo_corrente, prezzi_settimana):
         """ Implementa la ricorsione """
-        # TODO
+        if giorno > 7:
+            if self.__costo_ottimo == -1 or costo_corrente < self.__costo_ottimo:
+                self.__costo_ottimo = costo_corrente
+                self.__sequenza_ottima = sequenza_parziale.copy()
+            return
+
+        for id_distributore, prezzi_giornalieri in prezzi_settimana.items():
+            prezzo_litro = prezzi_giornalieri[giorno - 1]
+            costo_spostamento = 5 if ultimo_distributore is not None and ultimo_distributore != id_distributore else 0
+            nuovo_costo = costo_corrente + prezzo_litro * 100 + costo_spostamento
+
+            sequenza_parziale.append(id_distributore)
+            self.__ricorsione(sequenza_parziale, giorno + 1, id_distributore, nuovo_costo, prezzi_settimana)
+            sequenza_parziale.pop()
 
     def __get_prezzi_prima_settimana_mese(self, mese: int):
         """
         Restituisce i prezzi dei primi 7 giorni del mese selezionato per ciascun distributore.
         :return: un dizionario: {id_distributore: [prezzo_giorno1, ..., prezzo_giorno7]}
         """
-        # TODO
+        prezzi_settimana = {}
+        for distributore in self._distributori:
+            prezzi_mese = sorted(
+                (p for p in distributore.get_prezzi() if p.data.month == mese),
+                key=lambda p: p.data
+            )
+            prezzi_settimana[distributore.id] = [p.prezzo_litro for p in prezzi_mese[:7]]
+        return prezzi_settimana
